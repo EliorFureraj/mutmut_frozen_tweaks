@@ -409,6 +409,7 @@ Legend for output:
     else:
         return compute_exit_code(progress, ci=ci)
     finally:
+        progress.print_summary()
         print()  # make sure we end the output with a newline
         # Close all active multiprocessing queues to avoid hanging up the main process
         close_active_queues()

@@ -472,14 +472,18 @@ mutations_by_type = {
 }
 
 # TODO: detect regexes and mutate them in nasty ways? Maybe mutate all strings as if they are regexes
-
+def clean_path(path):
+    parts = path.split('/')
+    # Remove './' at the beginning and single-letter directories
+    cleaned_parts = [part for part in parts if part != '.' and len(part) > 1]
+    return '/'.join(cleaned_parts)
 
 def should_exclude(context, config):
     if config is None or config.covered_lines_by_filename is None:
         return False
 
     try:
-        covered_lines = config.covered_lines_by_filename[context.filename]
+        covered_lines = config.covered_lines_by_filename[clean_path(context.filename)]
     except KeyError:
         if config.coverage_data is not None:
             covered_lines = config.coverage_data.get(os.path.abspath(context.filename))
@@ -980,6 +984,22 @@ class Progress(object):
             self.skipped)
         )
 
+    def print_summary(self):
+        print_status('{}/{}  {} {}  {} {}  {} {}  {} {}  {} {}'.format(
+            self.progress,
+            self.total,
+            self.output_legend["killed"],
+            self.killed_mutants,
+            self.output_legend["timeout"],
+            self.surviving_mutants_timeout,
+            self.output_legend["suspicious"],
+            self.suspicious_mutants,
+            self.output_legend["survived"],
+            self.surviving_mutants,
+            self.output_legend["skipped"],
+            self.skipped)
+        )
+
     def register(self, status):
         if status == BAD_SURVIVED:
             self.surviving_mutants += 1
@@ -1237,7 +1257,7 @@ def read_patch_data(patch_file_path):
         diffs = whatthepatch.parse_patch(f.read())
 
     return {
-        diff.header.new_path: {change.new for change in diff.changes if change.old is None}
+        clean_path(diff.header.new_path): {change.new for change in diff.changes if change.old is None}
         for diff in diffs if diff.changes
     }
 
